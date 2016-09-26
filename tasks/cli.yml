@@ -14,19 +14,45 @@
   retries: 5
   delay: 10
 
-- name: Get Jenkins updates
-  get_url: url=http://updates.jenkins-ci.org/update-center.json dest={{ jenkins.updates_dest }} thirsty=yes mode=0440 timeout=30 use_proxy={{proxy}}
-  environment: proxy_env
-  register: jenkins_updates
-  when: proxy
+- name: Enable the JNLP port (set to 'random')
+  lineinfile:
+    dest: "{{ jenkins_lib }}/config.xml"
+    regexp: "<slaveAgentPort>"
+    line: "  <slaveAgentPort>0</slaveAgentPort>"
+    backup: true
+  register: jnlp_enabled
 
-- name: Get Jenkins updates without proxy
-  get_url: url=https://updates.jenkins-ci.org/update-center.json dest={{ jenkins.updates_dest }} thirsty=yes mode=0440 timeout=30 use_proxy={{proxy}}
-  register: jenkins_updates
-  when: not proxy
+- name: Set the admin user password
+  lineinfile:
+    dest: "{{ jenkins_lib }}/users/admin/config.xml"
+    regexp: "<passwordHash>"
+    line: "      <passwordHash>#jbcrypt:$2a$10$9wF5tTMK0Xu66Av1uLPKKO9.5WYibEJmwuAaePtHh1Ylbed3BIU7e</passwordHash>"
+    backup: false
+  register: admin_pw_changed
 
-- name: Update-center Jenkins
-  shell: "cat {{ jenkins.updates_dest }} | sed '1d;$d' | curl -X POST -H 'Accept: application/json' -d @- {{ jenkins_api_url }}updateCenter/byId/default/postBack"
-  when: jenkins_updates.changed
-  notify:
-    - 'Restart Jenkins'
+- name: Hard-restart Jenkins if required (for changed pw & JNLP to take effect)
+  service:
+    name: jenkins
+    state: restarted
+  when: "{{ jnlp_enabled.changed or admin_pw_changed.changed }}"
+  register: jenkins_hard_restarted
+
+- name: Wait for Jenkins to start up again
+  wait_for:
+    port: 8080
+    delay: 5
+    connect_timeout: 5
+    timeout: 20
+  when: jenkins_hard_restarted.changed
+
+# Need a cookie crumb
+#- name: Get Jenkins updates without proxy
+#  get_url: url=https://updates.jenkins-ci.org/update-center.json dest={{ jenkins.updates_dest }} thirsty=yes mode=0440 timeout=30 use_proxy={{proxy}}
+#  register: jenkins_updates
+#  when: not proxy
+
+#- name: Update-center Jenkins
+#  shell: "cat {{ jenkins.updates_dest }} | sed '1d;$d' | curl -X POST -H 'Accept: application/json' -d @- {{ jenkins_api_url }}updateCenter/byId/default/postBack"
+#  when: jenkins_updates.changed
+#  notify:
+#    - 'Restart Jenkins'

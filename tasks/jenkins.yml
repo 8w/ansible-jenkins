@@ -8,6 +8,8 @@
   command: >
     {{ jenkins_cli_cmd }} login --username {{ jenkins_admin_user }} --password {{ jenkins_admin_password }}
   when: jenkins_admin_user is defined and jenkins_admin_password is defined
+  no_log: true
+  changed_when: false
 
 - include: dependencies_deb.yml
   when: ansible_os_family == "Debian"
@@ -52,5 +54,3 @@
 - include: cli.yml
 
 - include: plugins.yml
-
-#- include: config.yml
