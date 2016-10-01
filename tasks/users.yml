@@ -1,0 +1,9 @@
+---
+- name: "Add jenkins to the shadow group (required for the PAM module)"
+  user:
+    name: jenkins
+    groups: shadow
+    append: true
+
+# TODO: Generate ssh key for jenkins
+# TODO: update admin jenkins login to use ssh key file

@@ -2,15 +2,6 @@
 
 - include: repo.yml
 
-- name: Log in to Jenkins CLI if auth config is available
-  # OK to ignore errors as it won't work before Jenkins is installed
-  ignore_errors: yes
-  command: >
-    {{ jenkins_cli_cmd }} login --username {{ jenkins_admin_user }} --password {{ jenkins_admin_password }}
-  when: jenkins_admin_user is defined and jenkins_admin_password is defined
-  no_log: true
-  changed_when: false
-
 - include: dependencies_deb.yml
   when: ansible_os_family == "Debian"
 
@@ -48,6 +39,8 @@
     state: started
     enabled: yes
   when: ansible_os_family == "FreeBSD"
+
+- include: users.yml
 
 - include: config.yml
 

@@ -37,13 +37,17 @@
   when: "{{ jnlp_enabled.changed or admin_pw_changed.changed }}"
   register: jenkins_hard_restarted
 
-- name: Wait for Jenkins to start up again
-  wait_for:
-    port: 8080
-    delay: 5
-    connect_timeout: 5
-    timeout: 20
-  when: jenkins_hard_restarted.changed
+- name: Log in to the Jenkins CLI
+  command: >
+    {{ jenkins_cli_cmd }} login --username {{ jenkins_admin_user }} --password {{ jenkins_admin_password }}
+  when: "{{ jenkins_admin_user is defined and jenkins_admin_password is defined }}"
+  no_log: true
+  register: result
+  until: result.rc == 0
+  retries: 15   # gives it 30 seconds to restart
+  delay: 2
+  changed_when: false
+  ignore_errors: yes
 
 # Need a cookie crumb
 #- name: Get Jenkins updates without proxy
