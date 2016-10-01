@@ -14,13 +14,13 @@
   retries: 5
   delay: 10
 
-- name: Enable the JNLP port (set to 'random')
-  lineinfile:
-    dest: "{{ jenkins_lib }}/config.xml"
-    regexp: "<slaveAgentPort>"
-    line: "  <slaveAgentPort>0</slaveAgentPort>"
-    backup: true
+- name: "Enable the JNLP port (set to 'random')"
+  xml:
+    file: "{{ jenkins_lib }}/config.xml"
+    xpath: "/hudson/slaveAgentPort"
+    value: "0"
   register: jnlp_enabled
+  tags: "debug"
 
 - name: Set the admin user password
   lineinfile:
