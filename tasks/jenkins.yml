@@ -40,6 +40,11 @@
     enabled: yes
   when: ansible_os_family == "FreeBSD"
 
+- name: Add python xml library - used elsewhere in this module
+  apt:
+    name: 'python-lxml'
+    state: "installed"
+
 - include: users.yml
 
 - include: config.yml

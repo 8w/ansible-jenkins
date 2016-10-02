@@ -6,49 +6,61 @@
   shell: cat {{ jenkins_dest }}/proxy.groovy | {{ jenkins_cli_cmd }} groovy =
   when: proxy|bool
 
+- name: Ensure jenkins is running
+  service:
+    name: jenkins
+    state: started
+
+- name: "Make sure jenkins is ready to accept connections"
+  wait_for:
+    port: 8080
+    connect_timeout: 2
+    timeout: 60
+
 - name: List plugins
   shell: "{{ jenkins_cli_cmd }} list-plugins | cut -f 1 -d ' '"
+  become: true
+  become_user: "jenkins"
   when: plugins is defined
   register: plugins_installed
   changed_when: false
   until: plugins_installed.rc == 0
-  retries: 5
-  delay: 2
-  ignore_errors: yes
-
-- name: Ensure jenkins running before requesting safe restart
-  service: name=jenkins state=started
+  retries: 10
+  delay: 3
 
 - name: Install plugins
   shell: "{{ jenkins_cli_cmd }} install-plugin '{{ item }}'"
+  become: true
+  become_user: "jenkins"
   when: plugins_installed.stdout.find('{{ item }}') == -1
   with_items: plugins
-  ignore_errors: yes
   register: result
   until: result.rc == 0
   retries: 5
-  delay: 2
+  delay: 3
   notify:
     - 'Restart Jenkins'
 
 - name: List plugins to be updated
-  shell: "{{ jenkins_cli_cmd }} -noKeyAuth list-plugins | grep ')$' | cut -f 1 -d ' ' | awk 1 ORS=' '"
+  shell: "{{ jenkins_cli_cmd }} list-plugins | grep ')$' | cut -f 1 -d ' ' | awk 1 ORS=' '"
+  become: true
+  become_user: "jenkins"
   register: plugins_updates
   when: (ansible_os_family == "Debian" or ansible_os_family == "RedHat")
   changed_when: false
   until: plugins_updates.rc == 0
   retries: 5
-  delay: 2
-  ignore_errors: yes
+  delay: 3
 
 - name: Update plugins
   shell: "{{ jenkins_cli_cmd }} install-plugin {{ item }}"
+  become: true
+  become_user: "jenkins"
   with_items: plugins_updates.stdout.split()
   when: plugins_updates.stdout != ''
-  ignore_errors: yes
   register: result
   until: result.rc == 0
   retries: 5
-  delay: 2
+  delay: 3
   notify:
     - 'Restart Jenkins'

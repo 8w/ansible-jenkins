@@ -1,10 +1,5 @@
 # Safe-restart Jenkins
 - name: Restart Jenkins
-  sudo: yes
+  become: true
+  become_user: jenkins
   command: "{{ jenkins_cli_cmd }} safe-restart"
-
-- name: Hard restart Jenkins
-  sudo: yes
-  service:
-    name: "jenkins"
-    state: "reloaded"
