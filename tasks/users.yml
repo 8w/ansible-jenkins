@@ -13,25 +13,37 @@
   register: jenkins_ssh_key
   tags: "debug"
 
-- name: "Wait for admin user file to be created"
+- name:  Check to see if the jenkins user has already been created
+  stat:
+    path: "{{ jenkins_lib }}/users/jenkins/config.xml"
+  register: jenkins_user_configfile
+
+# if not:
+- name: "Wait for default (admin) user file to be created"
   wait_for:
     path: "{{ jenkins_lib }}/users/admin/config.xml"
     state: "present"
     connect_timeout: 3
     timeout: 60
+  when: "{{ jenkins_user_configfile.stat.exists != true }}"
+
+- name: "Rename the default (admin) user config file to jenkins"
+  shell: "mv {{ jenkins_lib }}/users/admin/config.xml {{ jenkins_lib }}/users/jenkins/config.xml"
+  args:
+    creates: "{{ jenkins_lib }}/users/jenkins/config.xml"
 
 # TODO: Check back on defect https://github.com/cmprescott/ansible-xml/issues/81
 # Once closed, should just be able to do an XPath and value with implicit parent node create instead of the next three steps
 - name: "Check if the UserPropertyImpl key exists"
   xml:
-    file: "{{ jenkins_lib }}/users/admin/config.xml"
+    file: "{{ jenkins_lib }}/users/jenkins/config.xml"
     xpath: "/user/properties/org.jenkinsci.main.modules.cli.auth.ssh.UserPropertyImpl"
     count: true
   register: jenkins_ssh_xml_auth_exists
 
 - name: "Add the the UserPropertyImpl key"
   xml:
-    file: "{{ jenkins_lib }}/users/admin/config.xml"
+    file: "{{ jenkins_lib }}/users/jenkins/config.xml"
     xpath: "/user/properties"
     add_children:
        - "org.jenkinsci.main.modules.cli.auth.ssh.UserPropertyImpl"
@@ -40,22 +52,24 @@
 
 - name: "Add the jenkins ssh key for CLI acccess"
   xml:
-    file: "{{ jenkins_lib }}/users/admin/config.xml"
+    file: "{{ jenkins_lib }}/users/jenkins/config.xml"
     xpath: "/user/properties/org.jenkinsci.main.modules.cli.auth.ssh.UserPropertyImpl"
     set_children:
        - authorizedKeys: "{{ jenkins_ssh_key.content | b64decode | trim }}"
     ensure: "present"
   register: jenkins_ssh_key_set
 
-- name: Set the admin user password
-  xml:
-    file: "{{ jenkins_lib }}/users/admin/config.xml"
-    xpath: "/user/properties/hudson.security.HudsonPrivateSecurityRealm_-Details/passwordHash"
-    value: "#jbcrypt:$2a$10$9wF5tTMK0Xu66Av1uLPKKO9.5WYibEJmwuAaePtHh1Ylbed3BIU7e"
-  register: jenkins_pw_key_set
+# not required now using PAM
+#- name: Set the admin user password
+#  xml:
+#    file: "{{ jenkins_lib }}/users/admin/config.xml"
+#    xpath: "/user/properties/hudson.security.HudsonPrivateSecurityRealm_-Details/passwordHash"
+#    value: "#jbcrypt:$2a$10$9wF5tTMK0Xu66Av1uLPKKO9.5WYibEJmwuAaePtHh1Ylbed3BIU7e"
+#  register: jenkins_pw_key_set
 
 - name: "Hard-restart Jenkins if required (for admin user cred changes to take effect)"
   service:
     name: "jenkins"
     state: "restarted"
-  when: "{{ jenkins_ssh_key_set.changed or jenkins_pw_key_set.changed }}"
+  when: "{{ jenkins_ssh_key_set.changed }}"
+#  when: "{{ jenkins_ssh_key_set.changed or jenkins_pw_key_set.changed }}"
