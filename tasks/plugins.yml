@@ -33,7 +33,7 @@
   become: true
   become_user: "jenkins"
   when: plugins_installed.stdout.find('{{ item }}') == -1
-  with_items: plugins
+  with_items: "{{ plugins }}"
   register: result
   until: result.rc == 0
   retries: 5
@@ -56,7 +56,7 @@
   shell: "{{ jenkins_cli_cmd }} install-plugin {{ item }}"
   become: true
   become_user: "jenkins"
-  with_items: plugins_updates.stdout.split()
+  with_items: "{{ plugins_updates.stdout.split() }}"
   when: plugins_updates.stdout != ''
   register: result
   until: result.rc == 0

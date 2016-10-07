@@ -27,8 +27,8 @@
     timeout: 60
   when: "{{ jenkins_user_configfile.stat.exists != true }}"
 
-- name: "Rename the default (admin) user config file to jenkins"
-  shell: "mv {{ jenkins_lib }}/users/admin/config.xml {{ jenkins_lib }}/users/jenkins/config.xml"
+- name: "Rename the default (admin) user folder to jenkins"
+  shell: "mv {{ jenkins_lib }}/users/admin {{ jenkins_lib }}/users/jenkins"
   args:
     creates: "{{ jenkins_lib }}/users/jenkins/config.xml"
 
