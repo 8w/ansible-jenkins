@@ -7,6 +7,27 @@
     ssh_key_comment: "jenkins@{{ ansible_hostname }}"
     append: true
 
+- name: "Set the authorization strategy to PAM"
+  xml:
+    file: "{{ jenkins_lib }}/config.xml"
+    xpath: "/hudson/securityRealm"
+    attribute: "class"
+    value: 'hudson.security.PAMSecurityRealm'
+
+- name: "Set the PAM authorization strategy version"
+  xml:
+    file: "{{ jenkins_lib }}/config.xml"
+    xpath: "/hudson/securityRealm"
+    attribute: "plugin"
+    value: 'pam-auth@1.3'
+
+- name: "Set the PAM authorization service name"
+  xml:
+    file: "{{ jenkins_lib }}/config.xml"
+    xpath: "/hudson/securityRealm"
+    set_children:
+      - serviceName: "sshd"
+
 - name: "Slurp the jenkins ssh key"
   slurp:
     src: "{{ jenkins_lib }}/.ssh/id_rsa.pub"
@@ -58,14 +79,6 @@
        - authorizedKeys: "{{ jenkins_ssh_key.content | b64decode | trim }}"
     ensure: "present"
   register: jenkins_ssh_key_set
-
-# not required now using PAM
-#- name: Set the admin user password
-#  xml:
-#    file: "{{ jenkins_lib }}/users/admin/config.xml"
-#    xpath: "/user/properties/hudson.security.HudsonPrivateSecurityRealm_-Details/passwordHash"
-#    value: "#jbcrypt:$2a$10$9wF5tTMK0Xu66Av1uLPKKO9.5WYibEJmwuAaePtHh1Ylbed3BIU7e"
-#  register: jenkins_pw_key_set
 
 - name: "Hard-restart Jenkins if required (for admin user cred changes to take effect)"
   service:
