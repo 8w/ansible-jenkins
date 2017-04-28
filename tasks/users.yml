@@ -46,7 +46,7 @@
     state: "present"
     connect_timeout: 3
     timeout: 60
-  when: "{{ jenkins_user_configfile.stat.exists != true }}"
+  when: jenkins_user_configfile.stat.exists != true
 
 - name: "Rename the default (admin) user folder to jenkins"
   shell: "mv {{ jenkins_lib }}/users/admin {{ jenkins_lib }}/users/jenkins"
@@ -69,7 +69,7 @@
     add_children:
        - "org.jenkinsci.main.modules.cli.auth.ssh.UserPropertyImpl"
     ensure: "present"
-  when: "{{ jenkins_ssh_xml_auth_exists.count == 0 }}"
+  when: jenkins_ssh_xml_auth_exists.count == 0
 
 - name: "Add the jenkins ssh key for CLI acccess"
   xml:
@@ -84,5 +84,4 @@
   service:
     name: "jenkins"
     state: "restarted"
-  when: "{{ jenkins_ssh_key_set.changed }}"
-#  when: "{{ jenkins_ssh_key_set.changed or jenkins_pw_key_set.changed }}"
+  when: jenkins_ssh_key_set.changed
